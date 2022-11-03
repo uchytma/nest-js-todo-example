@@ -1,9 +1,8 @@
 import { Controller, Get, Post, Body, Put, Param, Delete, HttpException, HttpStatus, Query } from '@nestjs/common';
-import { CreateTodoDto, TodoDto, UpdateTodoDto } from './todo.dtos';
+import { CreateTodoDto, TodoDto, UpdateTodoDto, GetTodoDto, GetListDto } from './todo.dtos';
 import { TodoService } from './domain/todo.service';
 import type { Guid } from '../utils/commonTypes';
 import { TodoNotFoundError } from './domain/todo.errors';
-import { transformToBoolean, transformToNullableBoolean, transformToNullableString } from '../utils/commonTransforms';
 
 @Controller('todos')
 export class TodoController {
@@ -16,6 +15,7 @@ export class TodoController {
 
   @Put(':id')
   update(@Body() model: UpdateTodoDto, @Param('id') id: Guid): TodoDto {
+    console.log('controller model: ', model);
     const todo = {
       id: id,
       name: model.name,
@@ -31,23 +31,13 @@ export class TodoController {
   }
 
   @Get(':id')
-  get(@Param('id') id: Guid, @Query('includeDeleted') includeDeleted = false): TodoDto {
-    const includeDeletedBool = transformToBoolean(includeDeleted);
-
-    return this.processAndHandleDomainErrors(() => this.todoService.getTodoById(id, includeDeletedBool));
+  get(@Param('id') id: Guid, @Query() model: GetTodoDto): TodoDto {
+    return this.processAndHandleDomainErrors(() => this.todoService.getTodoById(id, model.includeDeleted));
   }
 
   @Get()
-  getList(
-    @Query('includeDeleted') includeDeleted = false,
-    @Query('filterCompleted') filterCompleted: boolean | null,
-    @Query('filterSearchByName') filterSearchByName: string | null,
-  ): TodoDto[] {
-    const includeDeletedBool = transformToBoolean(includeDeleted);
-    const filterCompletedBool = transformToNullableBoolean(filterCompleted);
-    const filterSearchByNameString = transformToNullableString(filterSearchByName);
-
-    return this.todoService.getTodoList(includeDeletedBool, filterCompletedBool, filterSearchByNameString);
+  getList(@Query() model: GetListDto): TodoDto[] {
+    return this.todoService.getTodoList(model.includeDeleted, model.filterCompleted, model.filterSearchByName);
   }
 
   private processAndHandleDomainErrors<T>(fn: () => T): T {
